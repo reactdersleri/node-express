@@ -2,6 +2,7 @@ const express = require("express");
 const data = require("./data.js");
 
 const server = express();
+server.use(express.json());
 
 server.get("/", (req, res) => {
   res.send("Express'ten merhaba");
