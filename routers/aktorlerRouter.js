@@ -7,12 +7,25 @@ router.get("/", (req, res) => {
 
 let next_id = 4;
 
-router.post("/", (req, res) => {
+router.post("/", (req, res, next) => {
   let yeni_aktor = req.body;
-  yeni_aktor.id = next_id;
-  next_id++;
-  data.push(yeni_aktor);
-  res.status(201).json(yeni_aktor);
+
+  if (!yeni_aktor.isim) {
+    next({
+      statusCode: 400,
+      errorMessage: "Aktor eklemek icin isim girmelisiniz.",
+    });
+  } else if (yeni_aktor.isim && !yeni_aktor.filmler) {
+    next({
+      statusCode: 400,
+      errorMessage: "Aktor eklemek icin filmler girmelisiniz.",
+    });
+  } else {
+    yeni_aktor.id = next_id;
+    next_id++;
+    data.push(yeni_aktor);
+    res.status(201).json(yeni_aktor);
+  }
 });
 
 router.delete("/:id", (req, res) => {
