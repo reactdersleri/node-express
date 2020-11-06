@@ -1,64 +1,120 @@
 const router = require("express").Router();
-let data = require("../data.js");
+const Aktor = require("../data/data-model");
 
-router.get("/", (req, res) => {
-  res.status(200).json(data);
+router.get("/", (req, res, next) => {
+  Aktor.findAktor()
+    .then((aktorler) => {
+      res.status(200).json(aktorler);
+    })
+    .catch((error) => {
+      next({
+        statusCode: 500,
+        errorMessage: "Aktorler alinirken hata olustu.",
+        error,
+      });
+    });
 });
 
-let next_id = 4;
-
 router.post("/", (req, res, next) => {
-  let yeni_aktor = req.body;
+  const yeniAktor = req.body;
 
-  if (!yeni_aktor.isim) {
+  if (!yeniAktor.isim) {
     next({
       statusCode: 400,
       errorMessage: "Aktor eklemek icin isim girmelisiniz.",
     });
-  } else if (yeni_aktor.isim && !yeni_aktor.filmler) {
+  } else {
+    Aktor.addAktor(yeniAktor)
+      .then((added) => {
+        res.status(201).json(added);
+      })
+      .catch((error) => {
+        next({
+          statusCode: 500,
+          errorMessage: "Aktor eklerken hata olustu.",
+          error,
+        });
+      });
+  }
+});
+
+router.patch("/:id", (req, res, next) => {
+  const { id } = req.params;
+  const updatedAktor = req.body;
+
+  if (!updatedAktor.isim) {
     next({
       statusCode: 400,
-      errorMessage: "Aktor eklemek icin filmler girmelisiniz.",
+      errorMessage: "Aktor ismi bos olamaz.",
     });
   } else {
-    yeni_aktor.id = next_id;
-    next_id++;
-    data.push(yeni_aktor);
-    res.status(201).json(yeni_aktor);
+    Aktor.updateAktor(updatedAktor, id)
+      .then((updated) => {
+        res.status(200).json(updated);
+      })
+      .catch((error) => {
+        next({
+          statusCode: 500,
+          errorMessage: "Aktor duzenlenirken hata olustu.",
+          error,
+        });
+      });
   }
 });
 
-router.delete("/:id", (req, res) => {
-  const silinecek_aktor_id = req.params.id;
-  const silinecek_aktor = data.find(
-    (aktor) => aktor.id === Number(silinecek_aktor_id)
-  );
-
-  if (silinecek_aktor) {
-    data = data.filter((aktor) => aktor.id !== Number(silinecek_aktor_id));
-    res.status(204).end();
-  } else {
-    res
-      .status(404)
-      .json({ errorMessage: "Silmeye calistiginiz aktor sistemde yok." });
-  }
-});
-
-// PUT
-// id req.params'dan al
-// duzenlenen aktor degerini req.body al
-// dizi icinde id ile aktor var mi?
-// aktor sistemde varsa, bilgileri degistir, 200 koduyla yeni aktor bilgilerini gonder
-// 404 koduyla hata gonder
-
-router.get("/:id", (req, res) => {
+router.delete("/:id", (req, res, next) => {
   const { id } = req.params;
-  const aktor = data.find((aktor) => aktor.id === parseInt(id));
-  if (aktor) {
-    res.status(200).json(aktor);
-  } else {
-    res.status(404).send("Aradiginiz aktor bulunamadi...");
-  }
+
+  Aktor.findAktorById(id)
+    .then((silinecekAktor) => {
+      Aktor.deleteAktor(id)
+        .then((deleted) => {
+          if (deleted) {
+            res.status(204).end();
+          }
+          next({
+            statusCode: 400,
+            errorMessage: "Silmeye calistiginiz aktor sistemde mevcut degil.",
+          });
+        })
+        .catch((error) => {
+          next({
+            statusCode: 500,
+            errorMessage: "Aktor silinirken hata olustu.",
+            error,
+          });
+        });
+    })
+    .catch((error) => {
+      next({
+        statusCode: 500,
+        errorMessage: "Aktor bulunurken hata olustu.",
+        error,
+      });
+    });
+});
+
+router.get("/:id", (req, res, next) => {
+  const { id } = req.params;
+
+  Aktor.findAktorById(id)
+    .then((aktor) => {
+      if (aktor) {
+        res.status(200).json(aktor);
+      } else {
+        next({
+          statusCode: 400,
+          erorMessage: "Aktor bulunamadi.",
+        });
+      }
+    })
+    .catch((error) => {
+      next({
+        statusCode: 500,
+        errorMessage: "Aktor bulunurken hata olustu.",
+        error,
+      });
+    });
 });
 
 module.exports = router;
